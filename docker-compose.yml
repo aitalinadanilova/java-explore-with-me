@@ -6,13 +6,12 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - stats-db
+      stats-db:
+        condition: service_healthy
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
       - SPRING_DATASOURCE_USERNAME=explore
       - SPRING_DATASOURCE_PASSWORD=explore
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
-      - SPRING_SQL_INIT_MODE=always
 
   stats-db:
     image: postgres:16.1
@@ -23,6 +22,11 @@ services:
       - POSTGRES_PASSWORD=explore
     ports:
       - "54321:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   ewm-service:
     build: ./ewm-main-service
@@ -42,8 +46,13 @@ services:
     image: postgres:16.1
     container_name: ewm-db
     environment:
-      - POSTGRES_DB=explore
+      - POSTGRES_DB=ewm
       - POSTGRES_USER=explore
       - POSTGRES_PASSWORD=explore
     ports:
       - "54322:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
