@@ -19,6 +19,7 @@ services:
     container_name: ewm-service
     ports:
       - "8080:8080"
+    network_mode: "bridge"
     depends_on:
       main-db:
         condition: service_healthy
