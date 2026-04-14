@@ -17,14 +17,13 @@ services:
   ewm-service:
     build: ./ewm-main-service
     container_name: ewm-service
+    # Добавляем это, чтобы Docker не умничал с сетями
+    network_mode: bridge
     ports:
       - "8080:8080"
-    network_mode: "bridge"
     depends_on:
       main-db:
         condition: service_healthy
-      stats-server:
-        condition: service_started
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://main-db:5432/ewm_main
       - STATS_SERVER_URL=http://stats-server:9090
