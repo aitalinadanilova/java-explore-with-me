@@ -81,5 +81,16 @@ public class ErrorHandler {
                 .build();
     }
 
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleMissingParamsException(org.springframework.web.bind.MissingServletRequestParameterException e) {
+        return ApiError.builder()
+                .status("BAD_REQUEST")
+                .reason("Required request parameter is missing")
+                .message(e.getMessage())
+                .timestamp(LocalDateTime.now().format(FORMATTER))
+                .build();
+    }
+
 }
 
