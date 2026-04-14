@@ -17,7 +17,6 @@ import ru.practicum.main.user.model.User;
 import ru.practicum.main.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
