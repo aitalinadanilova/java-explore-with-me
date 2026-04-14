@@ -187,19 +187,8 @@ public class EventServiceImpl implements EventService {
                 throw new ConflictException("Request must have status PENDING");
             }
 
-            if (updateRequest.getStatus().equals("CONFIRMED")) {
-                if (event.getParticipantLimit() == 0 || confirmedCount < event.getParticipantLimit()) {
-                    req.setStatus(RequestStatus.CONFIRMED);
-                    confirmedCount++;
-                    result.getConfirmedRequests().add(RequestMapper.toDto(req));
-                } else {
-                    req.setStatus(RequestStatus.REJECTED);
-                    result.getRejectedRequests().add(RequestMapper.toDto(req));
-                }
-            } else {
-                req.setStatus(RequestStatus.REJECTED);
-                result.getRejectedRequests().add(RequestMapper.toDto(req));
-            }
+            req.setStatus(RequestStatus.REJECTED);
+            result.getRejectedRequests().add(RequestMapper.toDto(req));
         }
         requestRepository.saveAll(requests);
         return result;
