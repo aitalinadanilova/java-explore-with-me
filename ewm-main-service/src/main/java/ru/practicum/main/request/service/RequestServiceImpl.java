@@ -8,6 +8,8 @@ import ru.practicum.main.event.model.EventState;
 import ru.practicum.main.event.repository.EventRepository;
 import ru.practicum.main.exception.ConflictException;
 import ru.practicum.main.exception.NotFoundException;
+import ru.practicum.main.request.dto.EventRequestStatusUpdateRequest;
+import ru.practicum.main.request.dto.EventRequestStatusUpdateResult;
 import ru.practicum.main.request.dto.ParticipationRequestDto;
 import ru.practicum.main.request.mapper.RequestMapper;
 import ru.practicum.main.request.model.ParticipationRequest;
@@ -90,6 +92,37 @@ public class RequestServiceImpl implements RequestService {
 
         request.setStatus(RequestStatus.CANCELED);
         return RequestMapper.toDto(requestRepository.save(request));
+    }
+
+    @Transactional
+    public EventRequestStatusUpdateResult updateRequestsStatus(Long userId, Long eventId, EventRequestStatusUpdateRequest updateRequest) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event not found"));
+
+
+        Long confirmedRequests = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
+
+        if (event.getParticipantLimit() != 0 && confirmedRequests >= event.getParticipantLimit()) {
+            throw new ConflictException("The participant limit has been reached");
+        }
+
+        List<ParticipationRequest> requests = requestRepository.findAllByIdIn(updateRequest.getRequestIds());
+
+        for (ParticipationRequest request : requests) {
+            if (updateRequest.getStatus() == RequestStatus.CONFIRMED) {
+                if (event.getParticipantLimit() != 0 && confirmedRequests >= event.getParticipantLimit()) {
+                    request.setStatus(RequestStatus.REJECTED);
+                } else {
+                    request.setStatus(RequestStatus.CONFIRMED);
+                    confirmedRequests++;
+                }
+            } else {
+                request.setStatus(RequestStatus.REJECTED);
+            }
+        }
+
+        requestRepository.saveAll(requests);
+        return RequestMapper.toStatusResult(requests);
     }
 
 }
