@@ -51,6 +51,10 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventFullDto createEvent(Long userId, NewEventDto newEventDto) {
+        if (newEventDto.getEventDate() == null) {
+            throw new BadRequestException("Event date cannot be null");
+        }
+
         if (newEventDto.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
             throw new BadRequestException("Event date must be in the future");
         }
@@ -149,7 +153,7 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
 
         if (request.getEventDate() != null && request.getEventDate().isBefore(LocalDateTime.now().plusHours(1))) {
-            throw new ConflictException("Event date must be at least 1 hour before publication");
+            throw new BadRequestException("Event date must be at least 1 hour before publication");
         }
 
         if (request.getStateAction() != null) {
@@ -213,6 +217,9 @@ public class EventServiceImpl implements EventService {
                 result.getRejectedRequests().add(RequestMapper.toDto(req));
             }
         }
+        event.setConfirmedRequests(confirmedCount);
+        eventRepository.save(event);
+
         requestRepository.saveAll(requests);
         return result;
     }
@@ -252,7 +259,7 @@ public class EventServiceImpl implements EventService {
             if (rangeEnd != null) predicates.add(cb.lessThanOrEqualTo(root.get("eventDate"), rangeEnd));
         }
 
-        if (onlyAvailable) {
+        if (onlyAvailable != null && onlyAvailable) {
             predicates.add(cb.or(
                     cb.equal(root.get("participantLimit"), 0),
                     cb.lessThan(root.get("confirmedRequests"), root.get("participantLimit"))
@@ -260,8 +267,10 @@ public class EventServiceImpl implements EventService {
         }
 
         query.where(predicates.toArray(new Predicate[0]));
-        if ("EVENT_DATE".equals(sort)) query.orderBy(cb.asc(root.get("eventDate")));
-
+        if ("EVENT_DATE".equals(sort)) {
+            query.orderBy(cb.asc(root.get("eventDate")));
+        } else if ("VIEWS".equals(sort)) {
+        }
         List<Event> events = entityManager.createQuery(query).setFirstResult(from).setMaxResults(size).getResultList();
         statsClient.postHit("ewm-main-service", request.getRequestURI(), request.getRemoteAddr(), LocalDateTime.now());
 

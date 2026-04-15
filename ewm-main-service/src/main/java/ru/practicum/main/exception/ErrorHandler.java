@@ -105,4 +105,15 @@ public class ErrorHandler {
                 .build();
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleBadRequestException(BadRequestException e) {
+        return ApiError.builder()
+                .status("BAD_REQUEST")
+                .reason("Incorrectly made request.")
+                .message(e.getMessage())
+                .timestamp(LocalDateTime.now().format(FORMATTER))
+                .build();
+    }
+
 }
