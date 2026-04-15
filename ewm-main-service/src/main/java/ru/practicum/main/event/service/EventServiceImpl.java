@@ -97,7 +97,14 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Event not found"));
 
         if (event.getState() == EventState.PUBLISHED) {
-            throw new BadRequestException("Only pending or canceled events can be changed");
+            throw new ConflictException("Only pending or canceled events can be changed");
+        }
+
+        if (request.getEventDate() != null) {
+            if (request.getEventDate().isBefore(LocalDateTime.now().plusHours(2))) {
+                throw new BadRequestException("Event date must be at least 2 hours from now");
+            }
+            event.setEventDate(request.getEventDate());
         }
 
         updateEventFields(event, request);
@@ -176,8 +183,13 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     public EventRequestStatusUpdateResult updateRequestStatus(Long userId, Long eventId, EventRequestStatusUpdateRequest updateRequest) {
-        Event event = eventRepository.findById(eventId).orElseThrow(() -> new NotFoundException("Event not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
+
         Long confirmedCount = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
+        if (event.getParticipantLimit() != 0 && confirmedCount >= event.getParticipantLimit()) {
+            throw new ConflictException("The participant limit has been reached");
+        }
 
         List<ParticipationRequest> requests = requestRepository.findAllByIdIn(updateRequest.getRequestIds());
         EventRequestStatusUpdateResult result = new EventRequestStatusUpdateResult(new ArrayList<>(), new ArrayList<>());
@@ -187,8 +199,19 @@ public class EventServiceImpl implements EventService {
                 throw new ConflictException("Request must have status PENDING");
             }
 
-            req.setStatus(RequestStatus.REJECTED);
-            result.getRejectedRequests().add(RequestMapper.toDto(req));
+            if (updateRequest.getStatus() == RequestStatus.CONFIRMED) {
+                if (event.getParticipantLimit() == 0 || confirmedCount < event.getParticipantLimit()) {
+                    req.setStatus(RequestStatus.CONFIRMED);
+                    confirmedCount++;
+                    result.getConfirmedRequests().add(RequestMapper.toDto(req));
+                } else {
+                    req.setStatus(RequestStatus.REJECTED);
+                    result.getRejectedRequests().add(RequestMapper.toDto(req));
+                }
+            } else {
+                req.setStatus(RequestStatus.REJECTED);
+                result.getRejectedRequests().add(RequestMapper.toDto(req));
+            }
         }
         requestRepository.saveAll(requests);
         return result;
