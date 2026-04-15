@@ -267,14 +267,25 @@ public class EventServiceImpl implements EventService {
         }
 
         query.where(predicates.toArray(new Predicate[0]));
+
         if ("EVENT_DATE".equals(sort)) {
             query.orderBy(cb.asc(root.get("eventDate")));
-        } else if ("VIEWS".equals(sort)) {
         }
-        List<Event> events = entityManager.createQuery(query).setFirstResult(from).setMaxResults(size).getResultList();
+
+        List<Event> events = entityManager.createQuery(query)
+                .setFirstResult(from)
+                .setMaxResults(size)
+                .getResultList();
+
         statsClient.postHit("ewm-main-service", request.getRequestURI(), request.getRemoteAddr(), LocalDateTime.now());
 
-        return mapToShortDtoWithViews(events);
+        List<EventShortDto> result = mapToShortDtoWithViews(events);
+
+        if ("VIEWS".equals(sort)) {
+            result.sort(Comparator.comparing(EventShortDto::getViews).reversed());
+        }
+
+        return result;
     }
 
     @Override
