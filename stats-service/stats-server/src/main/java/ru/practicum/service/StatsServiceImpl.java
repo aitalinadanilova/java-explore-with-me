@@ -6,6 +6,7 @@ import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.mapper.StatsMapper;
 import ru.practicum.repository.StatsRepository;
+import ru.practicum.exception.BadRequestException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,10 +25,15 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, boolean unique) {
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new BadRequestException("Start date cannot be after end date");
+        }
+
         if (unique) {
             return repository.getStatsUnique(start, end, uris);
+        } else {
+            return repository.getStats(start, end, uris);
         }
-        return repository.getStats(start, end, uris);
     }
 
 }
