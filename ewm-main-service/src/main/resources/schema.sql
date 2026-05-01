@@ -56,6 +56,15 @@ CREATE TABLE IF NOT EXISTS compilation_events (
     PRIMARY KEY (compilation_id, event_id)
 );
 
+CREATE TABLE IF NOT EXISTS ratings (
+    event_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    is_like BOOLEAN NOT NULL,
+    CONSTRAINT pk_rating PRIMARY KEY (event_id, user_id),
+    CONSTRAINT fk_rating_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rating_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_events_state ON events (state);
 CREATE INDEX IF NOT EXISTS idx_events_event_date ON events (event_date);
 CREATE INDEX IF NOT EXISTS idx_user_email ON users (email);
