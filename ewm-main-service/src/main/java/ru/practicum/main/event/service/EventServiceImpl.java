@@ -21,6 +21,7 @@ import ru.practicum.main.event.repository.EventRepository;
 import ru.practicum.main.exception.BadRequestException;
 import ru.practicum.main.exception.ConflictException;
 import ru.practicum.main.exception.NotFoundException;
+import ru.practicum.main.rating.repository.RatingRepository;
 import ru.practicum.main.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.main.request.dto.EventRequestStatusUpdateResult;
 import ru.practicum.main.request.dto.ParticipationRequestDto;
@@ -47,6 +48,7 @@ public class EventServiceImpl implements EventService {
     private final EntityManager entityManager;
     private final StatsClient statsClient;
     private final ObjectMapper objectMapper;
+    private final RatingRepository ratingRepository;
 
     @Override
     @Transactional
@@ -70,6 +72,9 @@ public class EventServiceImpl implements EventService {
 
         EventFullDto dto = EventMapper.toEventFullDto(eventRepository.save(event));
         dto.setViews(0L);
+        dto.setLikes(0L);
+        dto.setDislikes(0L);
+        dto.setRating(0L);
         return dto;
     }
 
@@ -91,6 +96,7 @@ public class EventServiceImpl implements EventService {
 
         EventFullDto dto = EventMapper.toEventFullDto(event);
         dto.setViews(getViewsForEvent(event));
+        setRatingInfo(dto);
         return dto;
     }
 
@@ -120,6 +126,7 @@ public class EventServiceImpl implements EventService {
 
         EventFullDto dto = EventMapper.toEventFullDto(eventRepository.save(event));
         dto.setViews(getViewsForEvent(event));
+        setRatingInfo(dto);
         return dto;
     }
 
@@ -175,6 +182,7 @@ public class EventServiceImpl implements EventService {
 
         EventFullDto dto = EventMapper.toEventFullDto(eventRepository.save(event));
         dto.setViews(getViewsForEvent(event));
+        setRatingInfo(dto);
         return dto;
     }
 
@@ -283,6 +291,8 @@ public class EventServiceImpl implements EventService {
 
         if ("VIEWS".equals(sort)) {
             result.sort(Comparator.comparing(EventShortDto::getViews).reversed());
+        } else if ("RATING".equals(sort)) {
+            result.sort(Comparator.comparing(EventShortDto::getRating).reversed());
         }
 
         return result;
@@ -301,7 +311,20 @@ public class EventServiceImpl implements EventService {
 
         EventFullDto dto = EventMapper.toEventFullDto(event);
         dto.setViews(getViewsForEvent(event));
+        setRatingInfo(dto);
         return dto;
+    }
+
+    private void setRatingInfo(EventFullDto dto) {
+        long likes = ratingRepository.countByEventIdAndIsLikeTrue(dto.getId());
+        long dislikes = ratingRepository.countByEventIdAndIsLikeFalse(dto.getId());
+        dto.setLikes(likes);
+        dto.setDislikes(dislikes);
+        dto.setRating(likes - dislikes);
+
+        if (dto.getInitiator() != null) {
+            dto.getInitiator().setRating(ratingRepository.getAuthorRating(dto.getInitiator().getId()));
+        }
     }
 
     private Long getViewsForEvent(Event event) {
@@ -325,6 +348,17 @@ public class EventServiceImpl implements EventService {
                 .map(e -> {
                     EventShortDto dto = EventMapper.toEventShortDto(e);
                     dto.setViews(viewsMap.getOrDefault(e.getId(), 0L));
+
+                    long l = ratingRepository.countByEventIdAndIsLikeTrue(e.getId());
+                    long d = ratingRepository.countByEventIdAndIsLikeFalse(e.getId());
+                    dto.setLikes(l);
+                    dto.setDislikes(d);
+                    dto.setRating(l - d);
+
+                    if (dto.getInitiator() != null) {
+                        dto.getInitiator().setRating(ratingRepository.getAuthorRating(e.getInitiator().getId()));
+                    }
+
                     return dto;
                 }).collect(Collectors.toList());
     }
@@ -336,6 +370,7 @@ public class EventServiceImpl implements EventService {
                 .map(e -> {
                     EventFullDto dto = EventMapper.toEventFullDto(e);
                     dto.setViews(viewsMap.getOrDefault(e.getId(), 0L));
+                    setRatingInfo(dto);
                     return dto;
                 }).collect(Collectors.toList());
     }
@@ -392,4 +427,5 @@ public class EventServiceImpl implements EventService {
             event.setLocation(EventMapper.toLocation(request.getLocation()));
         }
     }
+
 }
