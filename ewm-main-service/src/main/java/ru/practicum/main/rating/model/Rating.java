@@ -14,12 +14,10 @@ import ru.practicum.main.user.model.User;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Rating {
-    @Id
     @ManyToOne
     @JoinColumn(name = "event_id")
     private Event event;
 
-    @Id
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
