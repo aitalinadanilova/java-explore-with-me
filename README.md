@@ -32,9 +32,10 @@
 ## Запуск проекта
 
 Для запуска приложения необходимо иметь установленные Docker и Docker Compose.
-Соберите проект:
+*   **Соберите проект:**
 mvn clean package -DskipTests
-Запустите через Docker:
+
+*   **Запустите через Docker:**
 docker-compose up
 
 Сервис будет доступен по адресу http://localhost:8080.
